@@ -32,12 +32,12 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  supabase_flutter: ^2.8.4        # Supabase for auth, database, storage, real-time
-  agora_rtc_engine: ^6.5.1        # Video chat
-  provider: ^6.1.4                # State management
-  go_router: ^14.8.1              # Navigation
-  flutter_dotenv: ^5.2.1          # For .env file support
-  google_fonts: ^6.2.1            # Poppins font
+  supabase_flutter: ^2.8.4        # Connects to Supabase for backend services: auth, database, storage, real-time
+  agora_rtc_engine: ^6.5.1        # Handles video chat functionality
+  provider: ^6.1.4                # Simple state management for auth, users, and rooms
+  go_router: ^14.8.1              # Modern navigation system
+  flutter_dotenv: ^5.2.1          # For .env file support: Loads environment variables from a .env file
+  google_fonts: ^6.2.1            
 
 dev_dependencies:
   flutter_test:
