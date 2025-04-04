@@ -2,7 +2,7 @@ name: cliq
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -32,12 +32,12 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  supabase_flutter: ^2.8.4        # Connects to Supabase for backend services: auth, database, storage, real-time
-  agora_rtc_engine: ^6.5.1        # Handles video chat functionality
-  provider: ^6.1.4                # Simple state management for auth, users, and rooms
-  go_router: ^14.8.1              # Modern navigation system
-  flutter_dotenv: ^5.2.1          # For .env file support: Loads environment variables from a .env file
-  google_fonts: ^6.2.1            
+  supabase_flutter: ^2.8.4 # Connects to Supabase for backend services: auth, database, storage, real-time
+  agora_rtc_engine: ^6.5.1 # Handles video chat functionality
+  provider: ^6.1.4 # Simple state management for auth, users, and rooms
+  go_router: ^14.8.1 # Modern navigation system
+  flutter_dotenv: ^5.2.1 # For .env file support: Loads environment variables from a .env file
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:
@@ -50,8 +50,9 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - .env # Tell Flutter to include the .env file
