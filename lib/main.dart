@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Cliq',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(),
+      theme: appTheme(),
       routerConfig: router, // Using GoRouter setup for navigation
     );
   }
