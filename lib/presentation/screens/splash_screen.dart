@@ -18,20 +18,18 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkAuthStatus() async {
     try {
-      print('Checking auth status...');
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
-      print('User: $user');
-      await Future.delayed(const Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 2)); // simulate loading
+
+      if (!mounted) return; // Check if the widget is still mounted before navigating
+
       if (user != null) {
-        print('Navigating to /home');
         context.go('/home');
-      } else {
-        print('Navigating to /login');
+      } else {  
         context.go('/login');
       }
     } catch (e) {
-      print('Error in auth check: $e');
       context.go('/login'); // Fallback
     }
   }
@@ -54,4 +52,5 @@ class _SplashScreenState extends State<SplashScreen> {
       ),
     );
   }
+  
 }

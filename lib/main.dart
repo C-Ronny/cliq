@@ -21,6 +21,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Cliq',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
       routerConfig: router, // Using GoRouter setup for navigation
     );
