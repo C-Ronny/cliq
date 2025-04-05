@@ -12,6 +12,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isPasswordVisible = false;
 
   @override
   void dispose() {
@@ -21,113 +22,132 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-  try {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+    try {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
+      if (email.isEmpty || password.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill in all fields')),
+        );
+        return;
+      }
+
+      final supabase = Supabase.instance.client;
+      await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
       );
-      return;
-    }
 
-    final supabase = Supabase.instance.client;
-    await supabase.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
-
-    if (mounted) {
-      context.go('/home'); // Navigate to Home Screen on success
-    }
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: $e')),
-      );
+      if (mounted) {
+        context.go('/home');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login failed: $e')),
+        );
+      }
     }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1E1E1E), // Deep gray from your design
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const Text(
-                'Welcome Back',
+                'CLIQ',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Color(0xFFFFFFFF),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      context.go('/register');
+                    },
+                    child: const Text(
+                      'Sign Up',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Color(0xFFB3B3B3),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Text(
+                    'Sign In',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4CAF50),
+                      decoration: TextDecoration.underline,
+                      decorationColor: Color(0xFF4CAF50),
+                      decorationThickness: 2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 40),
               TextField(
                 controller: _emailController,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: const Color(0xFF333333), // Card color
+                decoration: const InputDecoration(
                   hintText: 'Email',
-                  hintStyle: const TextStyle(color: Color(0xFFB0B0B0)),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
+                  prefixIcon: Icon(Icons.person_outline),
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Color(0xFFFFFFFF)),
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _passwordController,
                 decoration: InputDecoration(
-                  filled: true,
-                  fillColor: const Color(0xFF333333),
                   hintText: 'Password',
-                  hintStyle: const TextStyle(color: Color(0xFFB0B0B0)),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: const Color(0xFFB3B3B3),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
                   ),
                 ),
-                style: const TextStyle(color: Colors.white),
-                obscureText: true,
+                style: const TextStyle(color: Color(0xFFFFFFFF)),
+                obscureText: !_isPasswordVisible,
+              ),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    // Add "Forgot Password" logic later
+                  },
+                  child: const Text(
+                    'Forgot password?',
+                    style: TextStyle(color: Color(0xFFB3B3B3)),
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed:  () {
-                  _login();
-                // Call the login function when the button is pressed
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF26A69A), // Teal accent
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  'Log In',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () {
-                  // Navigate to Register Screen (we’ll build this later)
-                },
-                child: const Text(
-                  'Don’t have an account? Register',
-                  style: TextStyle(color: Color(0xFF26A69A)),
-                ),
+                onPressed: _login,
+                child: const Text('Sign In'),
               ),
             ],
           ),
