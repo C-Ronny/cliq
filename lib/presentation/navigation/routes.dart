@@ -3,6 +3,7 @@ import 'package:cliq/presentation/screens/splash_screen.dart';
 import 'package:cliq/presentation/screens/login_screen.dart';
 import 'package:cliq/presentation/screens/home_screen.dart';
 import 'package:cliq/presentation/screens/register_screen.dart';
+import 'package:cliq/presentation/screens/profile_screen.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/',
@@ -23,5 +24,9 @@ final GoRouter router = GoRouter(
       path: '/home',
       builder: (context, state) => const HomeScreen(),
     ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileSetupScreen(),
+      ),
   ],
 );
