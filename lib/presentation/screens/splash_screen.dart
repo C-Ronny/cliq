@@ -17,40 +17,42 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAuthStatus() async {
-    try {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-      await Future.delayed(const Duration(seconds: 2)); // simulate loading
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    await Future.delayed(const Duration(seconds: 2));
 
-      if (!mounted) return; // Check if the widget is still mounted before navigating
+    if (user != null) {
+      // Check if user has a profile
+      final response = await supabase
+          .from('users')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
 
-      if (user != null) {
-        context.go('/home');
-      } else {  
-        context.go('/login');
+      if (response != null && response['display_name'] != null) {
+        context.go('/home'); // Profile exists, go to Home
+      } else {
+        context.go('/profile'); // No profile, go to Profile Setup
       }
-    } catch (e) {
-      context.go('/login'); // Fallback
+    } else {
+      context.go('/login');
     }
   }
-
-  static const Color customLightGreen = Color(0xFF76FF03);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.cyan.shade900,
-      body: Center(
+      backgroundColor: const Color(0xFF121212),
+      body: const Center(
         child: Text(
-          'Cliq',
+          'CLIQ',
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
-            color: customLightGreen,
+            color: Colors.white,
           ),
         ),
       ),
     );
   }
-  
 }
