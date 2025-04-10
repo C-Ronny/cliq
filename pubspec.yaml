@@ -39,6 +39,7 @@ dependencies:
   flutter_dotenv: ^5.2.1 # For .env file support: Loads environment variables from a .env file
   google_fonts: ^6.2.1
   image_picker: ^1.1.2 # Selecting images and videos from the gallery or taking them with camera
+  permission_handler: ^11.3.1 # Handles permissions for camera and microphone
 
 dev_dependencies:
   flutter_test:
