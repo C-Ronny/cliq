@@ -11,6 +11,14 @@ void main() async {
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+
+  // Auth state listener
+  Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    final AuthChangeEvent event = data.event;
+    final Session? session = data.session;
+    print('Auth state changed: $event, Session: $session');
+  });
+
   runApp(const MyApp());
 }
 

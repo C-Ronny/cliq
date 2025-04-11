@@ -154,7 +154,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     try {
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
-      if (user == null) throw 'No user logged in';
+      if (user == null) {
+        print('No user logged in. Current session: ${supabase.auth.currentSession}');
+        throw 'No user logged in';
+      }
 
       final displayName = _displayNameController.text.trim();
       if (displayName.isEmpty) {
@@ -186,6 +189,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         context.go('/home');
       }
     } catch (e) {
+      print('Error saving profile: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error saving profile: $e')),
