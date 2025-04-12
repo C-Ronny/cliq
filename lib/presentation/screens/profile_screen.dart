@@ -214,21 +214,34 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       print('No profile image uploaded, proceeding without profile_image_url');
     }
 
-    // Fetch existing user data to preserve first_name and last_name
+    // Check if the user's row exists in the users table
     final existingUser = await supabase
         .from('users')
-        .select('first_name, last_name')
+        .select('id, first_name, last_name')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
-    await supabase.from('users').upsert({
-      'id': user.id,
-      'email': user.email,
-      'username': username,
-      'profile_image_url': profileImageUrl,
-      'first_name': existingUser['first_name'],
-      'last_name': existingUser['last_name'],
-    });
+    if (existingUser == null) {
+      // Row doesn't exist, insert it
+      print('User row does not exist, inserting new row');
+      await supabase.from('users').insert({
+        'id': user.id,
+        'email': user.email,
+        'username': username,
+        'profile_image_url': profileImageUrl,
+        'first_name': user.userMetadata?['first_name'] ?? '',
+        'last_name': user.userMetadata?['last_name'] ?? '',
+      });
+    } else {
+      // Row exists, update it
+      print('User row exists, updating row');
+      await supabase.from('users').update({
+        'username': username,
+        'profile_image_url': profileImageUrl,
+        'first_name': existingUser['first_name'],
+        'last_name': existingUser['last_name'],
+      }).eq('id', user.id);
+    }
 
     print('Profile saved successfully for user ID: ${user.id}');
     if (mounted) {
