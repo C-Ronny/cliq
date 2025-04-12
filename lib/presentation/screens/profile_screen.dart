@@ -19,9 +19,38 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _checkProfileStatus();
+  }
+
+  @override
   void dispose() {
     _displayNameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkProfileStatus() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      print('No user logged in, redirecting to login');
+      context.go('/login');
+      return;
+    }
+
+    final response = await supabase
+        .from('users')
+        .select()
+        .eq('id', user.id)
+        .maybeSingle();
+
+    if (response != null &&
+        response['display_name'] != null &&
+        (response['display_name'] as String).trim().isNotEmpty) {
+      print('Profile already set up, redirecting to home');
+      context.go('/home');
+    }
   }
 
   Future<bool> _requestCameraPermission() async {
@@ -186,6 +215,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         context.go('/home');
       }
     } catch (e) {
+      print('Error saving profile: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error saving profile: $e')),

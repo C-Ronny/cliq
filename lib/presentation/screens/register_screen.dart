@@ -50,11 +50,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (response.user != null) {
+        // Since email confirmation is enabled, the user isn't logged in yet
         if (mounted) {
-          context.go('/profile');
+          // Show a confirmation message
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              backgroundColor: const Color(0xFF1E1E1E),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              title: const Text(
+                'Check Your Email',
+                style: TextStyle(
+                  color: Color(0xFFFFFFFF),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Text(
+                'A confirmation email has been sent to $email. Please confirm your email to continue.',
+                style: const TextStyle(color: Color(0xFFB3B3B3)),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.go('/login');
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
         }
+      } else {
+        throw 'Sign-up failed: No user returned';
       }
     } catch (e) {
+      print('Registration error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Registration failed: $e')),
@@ -62,6 +96,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

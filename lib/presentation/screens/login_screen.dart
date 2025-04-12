@@ -34,15 +34,27 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       final supabase = Supabase.instance.client;
-      await supabase.auth.signInWithPassword(
+      final response = await supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
-      if (mounted) {
-        context.go('/home');
+      if (response.user != null) {
+        // Wait for the session to be fully set
+        await Future.delayed(const Duration(milliseconds: 500));
+        final session = supabase.auth.currentSession;
+        print('Session after login: $session');
+        if (session == null) {
+          throw 'Failed to establish session after login';
+        }
+        if (mounted) {
+          context.go('/home');
+        }
+      } else {
+        throw 'Login failed: No user returned';
       }
     } catch (e) {
+      print('Login error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Login failed: $e')),
@@ -50,6 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
