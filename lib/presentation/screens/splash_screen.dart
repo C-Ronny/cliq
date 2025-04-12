@@ -31,6 +31,7 @@ class _SplashScreenState extends State<SplashScreen> {
             .eq('id', user.id)
             .maybeSingle();
 
+<<<<<<< HEAD
         print('Profile query response: $response');
         if (response != null &&
             response['display_name'] != null &&
@@ -39,6 +40,13 @@ class _SplashScreenState extends State<SplashScreen> {
           context.go('/home');
         } else {
           print('User has no valid profile, navigating to Profile Setup Screen');
+=======
+        if (response != null && response['display_name'] != null) {
+          print('User has profile, navigating to Home Screen');
+          context.go('/home');
+        } else {
+          print('User has no profile, navigating to Profile Setup Screen');
+>>>>>>> 1890767f40856d2826418181c2c7406e7fe5fca7
           context.go('/profile');
         }
       } else {
