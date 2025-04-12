@@ -50,16 +50,16 @@ class _SplashScreenState extends State<SplashScreen> {
         return;
       }
 
-      final displayName = response['display_name'] as String?;
-      print('Display name: $displayName');
+      final username = response['username'] as String?;
+      print('Username: $username');
 
-      if (displayName != null && displayName.trim().isNotEmpty) {
-        print('User has a display name set (display_name: $displayName), navigating to Home Screen');
+      if (username != null && username.trim().isNotEmpty) {
+        print('User has a username set (username: $username), navigating to Home Screen');
         if (mounted) {
           context.go('/home');
         }
       } else {
-        print('User does not have a display name set, navigating to Profile Setup Screen');
+        print('User does not have a username set, navigating to Profile Setup Screen');
         if (mounted) {
           context.go('/profile');
         }

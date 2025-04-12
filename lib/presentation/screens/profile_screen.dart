@@ -13,7 +13,7 @@ class ProfileSetupScreen extends StatefulWidget {
 }
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
-  final _displayNameController = TextEditingController();
+  final _usernameController = TextEditingController();
   File? _profileImage;
   final _picker = ImagePicker();
   bool _isLoading = false;
@@ -26,39 +26,40 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   @override
   void dispose() {
-    _displayNameController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
   Future<void> _checkProfileStatus() async {
-  final supabase = Supabase.instance.client;
-  final user = supabase.auth.currentUser;
-  if (user == null) {
-    print('No user logged in, redirecting to login');
-    context.go('/login');
-    return;
-  }
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      print('No user logged in, redirecting to login');
+      if (mounted) {
+        context.go('/login');
+      }
+      return;
+    }
 
-  print('Checking profile status for user ID: ${user.id}');
-  final response = await supabase
-      .from('users')
-      .select()
-      .eq('id', user.id)
-      .maybeSingle();
+    print('Checking profile status for user ID: ${user.id}');
+    final response = await supabase
+        .from('users')
+        .select()
+        .eq('id', user.id)
+        .maybeSingle();
 
-  print('Profile check response: $response');
-  if (response != null) {
-    final displayName = response['display_name'] as String?;
-    final profileImageUrl = response['profile_image_url'] as String?;
-    if (displayName != null &&
-        displayName.trim().isNotEmpty &&
-        profileImageUrl != null &&
-        profileImageUrl.trim().isNotEmpty) {
-      print('Profile already set up (display_name: $displayName, profile_image_url: $profileImageUrl), redirecting to home');
-      context.go('/home');
+    print('Profile check response: $response');
+    if (response != null) {
+      final username = response['username'] as String?;
+      final profileImageUrl = response['profile_image_url'] as String?;
+      if (username != null && username.trim().isNotEmpty) {
+        print('Profile already set up (username: $username, profile_image_url: $profileImageUrl), redirecting to home');
+        if (mounted) {
+          context.go('/home');
+        }
+      }
     }
   }
-}
 
   Future<bool> _requestCameraPermission() async {
     final status = await Permission.camera.request();
@@ -192,10 +193,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     final user = supabase.auth.currentUser;
     if (user == null) throw 'No user logged in';
 
-    final displayName = _displayNameController.text.trim();
-    if (displayName.isEmpty) {
+    final username = _usernameController.text.trim();
+    if (username.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a display name')),
+        const SnackBar(content: Text('Please enter a username')),
       );
       setState(() {
         _isLoading = false;
@@ -213,12 +214,20 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       print('No profile image uploaded, proceeding without profile_image_url');
     }
 
+    // Fetch existing user data to preserve first_name and last_name
+    final existingUser = await supabase
+        .from('users')
+        .select('first_name, last_name')
+        .eq('id', user.id)
+        .single();
+
     await supabase.from('users').upsert({
       'id': user.id,
       'email': user.email,
-      'display_name': displayName,
+      'username': username,
       'profile_image_url': profileImageUrl,
-      'username': user.userMetadata?['username'],
+      'first_name': existingUser['first_name'],
+      'last_name': existingUser['last_name'],
     });
 
     print('Profile saved successfully for user ID: ${user.id}');
@@ -309,9 +318,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 32),
               TextField(
-                controller: _displayNameController,
+                controller: _usernameController,
                 decoration: const InputDecoration(
-                  hintText: 'Display Name',
+                  hintText: 'Username',
                   prefixIcon: Icon(Icons.person_outline),
                 ),
                 style: const TextStyle(color: Color(0xFFFFFFFF)),

@@ -10,96 +10,106 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _fullNameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
 
   @override
   void dispose() {
-    _fullNameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
-    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _register() async {
-  try {
-    final fullName = _fullNameController.text.trim();
-    final email = _emailController.text.trim();
-    final username = _usernameController.text.trim();
-    final password = _passwordController.text.trim();
+    try {
+      final firstName = _firstNameController.text.trim();
+      final lastName = _lastNameController.text.trim();
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
 
-    if (fullName.isEmpty || email.isEmpty || username.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
+      if (firstName.isEmpty || lastName.isEmpty || email.isEmpty || password.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill in all fields')),
+        );
+        return;
+      }
+
+      final supabase = Supabase.instance.client;
+      final response = await supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: {
+          'first_name': firstName,
+          'last_name': lastName,
+        },
       );
-      return;
-    }
 
-    final supabase = Supabase.instance.client;
-    final response = await supabase.auth.signUp(
-      email: email,
-      password: password,
-      data: {
-        'full_name': fullName,
-        'username': username,
-      },
-    );
+      print('Sign-up response: $response');
+      print('User after signup: ${response.user}');
+      print('Current session after signup: ${supabase.auth.currentSession}');
 
-    print('Sign-up response: $response');
-    print('User after signup: ${response.user}');
-    print('Current session after signup: ${supabase.auth.currentSession}');
+      if (response.user != null) {
 
-    if (response.user != null) {
+        // Insert user into the users table
+        await supabase.from('users').insert({
+          'id': response.user!.id,
+          'email': email,
+          'first_name': firstName,
+          'last_name': lastName,
+        });
+
+        print('Inserted user into users table: ${response.user!.id}');
+        
+        if (mounted) {
+          // Show a confirmation message
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              backgroundColor: const Color(0xFF1E1E1E),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              title: const Text(
+                'Check Your Email',
+                style: TextStyle(
+                  color: Color(0xFFFFFFFF),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Text(
+                'A confirmation email has been sent to $email. Please confirm your email to continue.',
+                style: const TextStyle(color: Color(0xFFB3B3B3)),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.go('/login');
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+      } else {
+        throw 'Sign-up failed: No user returned';
+      }
+    } catch (e) {
+      print('Registration error: $e');
       if (mounted) {
-        // Show a confirmation message
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            backgroundColor: const Color(0xFF1E1E1E),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            title: const Text(
-              'Check Your Email',
-              style: TextStyle(
-                color: Color(0xFFFFFFFF),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            content: Text(
-              'A confirmation email has been sent to $email. Please confirm your email to continue.',
-              style: const TextStyle(color: Color(0xFFB3B3B3)),
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  context.go('/login');
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Registration failed: $e')),
         );
       }
-    } else {
-      throw 'Sign-up failed: No user returned';
-    }
-  } catch (e) {
-    print('Registration error: $e');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registration failed: $e')),
-      );
     }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -140,19 +150,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                     child: const Text(
                       'Sign In',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Color(0xFFB3B3B3),
-                      ),
+                      style: TextStyle(fontSize: 18, color: Color(0xFFB3B3B3)),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 16),
               TextField(
-                controller: _fullNameController,
+                controller: _firstNameController,
                 decoration: const InputDecoration(
-                  hintText: 'Full Name',
+                  hintText: 'First Name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                style: const TextStyle(color: Color(0xFFFFFFFF)),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _lastNameController,
+                decoration: const InputDecoration(
+                  hintText: 'Last Name',
                   prefixIcon: Icon(Icons.person_outline),
                 ),
                 style: const TextStyle(color: Color(0xFFFFFFFF)),
@@ -166,15 +182,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 style: const TextStyle(color: Color(0xFFFFFFFF)),
                 keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _usernameController,
-                decoration: const InputDecoration(
-                  hintText: 'Username',
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                style: const TextStyle(color: Color(0xFFFFFFFF)),
               ),
               const SizedBox(height: 16),
               TextField(
