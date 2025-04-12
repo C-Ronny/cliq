@@ -19,43 +19,56 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _checkAuthStatus() async {
     try {
       final supabase = Supabase.instance.client;
+      final session = supabase.auth.currentSession;
       final user = supabase.auth.currentUser;
-      print('Current user: $user');
-      print('Current session: ${supabase.auth.currentSession}');
+      print('Splash Screen - Current session: $session');
+      print('Splash Screen - Current user: $user');
+
       await Future.delayed(const Duration(seconds: 2));
 
-      if (user != null) {
-        final response = await supabase
-            .from('users')
-            .select()
-            .eq('id', user.id)
-            .maybeSingle();
+      if (user == null) {
+        print('No user logged in, navigating to Login Screen');
+        if (mounted) {
+          context.go('/login');
+        }
+        return;
+      }
 
-<<<<<<< HEAD
-        print('Profile query response: $response');
-        if (response != null &&
-            response['display_name'] != null &&
-            (response['display_name'] as String).trim().isNotEmpty) {
-          print('User has a valid profile (display_name: ${response['display_name']}), navigating to Home Screen');
-          context.go('/home');
-        } else {
-          print('User has no valid profile, navigating to Profile Setup Screen');
-=======
-        if (response != null && response['display_name'] != null) {
-          print('User has profile, navigating to Home Screen');
-          context.go('/home');
-        } else {
-          print('User has no profile, navigating to Profile Setup Screen');
->>>>>>> 1890767f40856d2826418181c2c7406e7fe5fca7
+      print('Querying users table for user ID: ${user.id}');
+      final response = await supabase
+          .from('users')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
+
+      print('Profile query response: $response');
+      if (response == null) {
+        print('No profile found for user, navigating to Profile Setup Screen');
+        if (mounted) {
           context.go('/profile');
         }
+        return;
+      }
+
+      final displayName = response['display_name'] as String?;
+      print('Display name: $displayName');
+
+      if (displayName != null && displayName.trim().isNotEmpty) {
+        print('User has a display name set (display_name: $displayName), navigating to Home Screen');
+        if (mounted) {
+          context.go('/home');
+        }
       } else {
-        print('No user logged in, navigating to Login Screen');
-        context.go('/login');
+        print('User does not have a display name set, navigating to Profile Setup Screen');
+        if (mounted) {
+          context.go('/profile');
+        }
       }
     } catch (e) {
       print('Error in _checkAuthStatus: $e');
-      context.go('/login');
+      if (mounted) {
+        context.go('/login');
+      }
     }
   }
 

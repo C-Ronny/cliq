@@ -12,7 +12,7 @@ void main() async {
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
-  // Auth state listener
+  // Log auth state changes for debugging
   Supabase.instance.client.auth.onAuthStateChange.listen((data) {
     final AuthChangeEvent event = data.event;
     final Session? session = data.session;
@@ -25,14 +25,13 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Cliq',
-      debugShowCheckedModeBanner: false,
       theme: appTheme(),
-      routerConfig: router, // Using GoRouter setup for navigation
+      debugShowCheckedModeBanner: false,
+      routerConfig: router,
     );
   }
 }

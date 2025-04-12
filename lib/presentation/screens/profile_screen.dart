@@ -31,27 +31,34 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   Future<void> _checkProfileStatus() async {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-    if (user == null) {
-      print('No user logged in, redirecting to login');
-      context.go('/login');
-      return;
-    }
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
+  if (user == null) {
+    print('No user logged in, redirecting to login');
+    context.go('/login');
+    return;
+  }
 
-    final response = await supabase
-        .from('users')
-        .select()
-        .eq('id', user.id)
-        .maybeSingle();
+  print('Checking profile status for user ID: ${user.id}');
+  final response = await supabase
+      .from('users')
+      .select()
+      .eq('id', user.id)
+      .maybeSingle();
 
-    if (response != null &&
-        response['display_name'] != null &&
-        (response['display_name'] as String).trim().isNotEmpty) {
-      print('Profile already set up, redirecting to home');
+  print('Profile check response: $response');
+  if (response != null) {
+    final displayName = response['display_name'] as String?;
+    final profileImageUrl = response['profile_image_url'] as String?;
+    if (displayName != null &&
+        displayName.trim().isNotEmpty &&
+        profileImageUrl != null &&
+        profileImageUrl.trim().isNotEmpty) {
+      print('Profile already set up (display_name: $displayName, profile_image_url: $profileImageUrl), redirecting to home');
       context.go('/home');
     }
   }
+}
 
   Future<bool> _requestCameraPermission() async {
     final status = await Permission.camera.request();
@@ -176,62 +183,63 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   Future<void> _saveProfile() async {
-    setState(() {
-      _isLoading = true;
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) throw 'No user logged in';
+
+    final displayName = _displayNameController.text.trim();
+    if (displayName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a display name')),
+      );
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+
+    String? profileImageUrl;
+    if (_profileImage != null) {
+      final fileName = '${user.id}/profile.jpg';
+      await supabase.storage.from('avatars').upload(fileName, _profileImage!);
+      profileImageUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
+      print('Profile image uploaded: $profileImageUrl');
+    } else {
+      print('No profile image uploaded, proceeding without profile_image_url');
+    }
+
+    await supabase.from('users').upsert({
+      'id': user.id,
+      'email': user.email,
+      'display_name': displayName,
+      'profile_image_url': profileImageUrl,
+      'username': user.userMetadata?['username'],
     });
 
-    try {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-      if (user == null) {
-        print('No user logged in. Current session: ${supabase.auth.currentSession}');
-        throw 'No user logged in';
-      }
-
-      final displayName = _displayNameController.text.trim();
-      if (displayName.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter a display name')),
-        );
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
-
-      String? profileImageUrl;
-      if (_profileImage != null) {
-        final fileName = '${user.id}/profile.jpg';
-        await supabase.storage.from('avatars').upload(fileName, _profileImage!);
-        profileImageUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
-      }
-
-      await supabase.from('users').upsert({
-        'id': user.id,
-        'email': user.email,
-        'display_name': displayName,
-        'profile_image_url': profileImageUrl,
-        'username': user.userMetadata?['username'],
+    print('Profile saved successfully for user ID: ${user.id}');
+    if (mounted) {
+      context.go('/home');
+    }
+  } catch (e) {
+    print('Error saving profile: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving profile: $e')),
+      );
+    }
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
       });
-
-      if (mounted) {
-        context.go('/home');
-      }
-    } catch (e) {
-      print('Error saving profile: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving profile: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {

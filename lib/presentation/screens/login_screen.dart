@@ -22,46 +22,44 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    try {
-      final email = _emailController.text.trim();
-      final password = _passwordController.text.trim();
+  try {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-      if (email.isEmpty || password.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please fill in all fields')),
-        );
-        return;
-      }
-
-      final supabase = Supabase.instance.client;
-      final response = await supabase.auth.signInWithPassword(
-        email: email,
-        password: password,
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all fields')),
       );
+      return;
+    }
 
-      if (response.user != null) {
-        // Wait for the session to be fully set
-        await Future.delayed(const Duration(milliseconds: 500));
-        final session = supabase.auth.currentSession;
-        print('Session after login: $session');
-        if (session == null) {
-          throw 'Failed to establish session after login';
-        }
-        if (mounted) {
-          context.go('/home');
-        }
-      } else {
-        throw 'Login failed: No user returned';
-      }
-    } catch (e) {
-      print('Login error: $e');
+    final supabase = Supabase.instance.client;
+    final response = await supabase.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+
+    print('Login response: $response');
+    print('User after login: ${response.user}');
+    print('Current session after login: ${supabase.auth.currentSession}');
+
+    if (response.user != null) {
+      // Navigate back to Splash Screen to handle routing
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: $e')),
-        );
+        context.go('/'); // Go to Splash Screen, which will redirect appropriately
       }
+    } else {
+      throw 'Login failed: No user returned';
+    }
+  } catch (e) {
+    print('Login error: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login failed: $e')),
+      );
     }
   }
+}
 
 
   @override
