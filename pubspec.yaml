@@ -40,6 +40,7 @@ dependencies:
   google_fonts: ^6.2.1
   image_picker: ^1.1.2 # Selecting images and videos from the gallery or taking them with camera
   permission_handler: ^11.3.1 # Handles permissions for camera and microphone
+  uni_links5: ^0.5.4 # linking support to automatically log user in after confirming email
 
 dev_dependencies:
   flutter_test:
