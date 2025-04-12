@@ -11,6 +11,8 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+
+# environment variables
 .env
 
 # IntelliJ related
@@ -44,3 +46,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+# Database schema file
+db.sql
