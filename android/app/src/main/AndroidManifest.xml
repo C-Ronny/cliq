@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.CAMERA"/> <!-- Camera permissions -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/> <!-- Storage permissions -->
+    <uses-permission android:name="android.permission.INTERNET"/> <!-- Internet permissions -->
     <application
         android:label="cliq"
         android:name="${applicationName}"
