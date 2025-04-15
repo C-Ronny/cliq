@@ -10,29 +10,58 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
+  final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
 
   @override
   void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
+    _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
+  void _showNetworkErrorModal() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        title: const Text(
+          'No Internet Connection',
+          style: TextStyle(
+            color: Color(0xFFFFFFFF),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Please check your internet connection and try again.',
+          style: TextStyle(color: Color(0xFFB3B3B3)),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _register() async {
     try {
-      final firstName = _firstNameController.text.trim();
-      final lastName = _lastNameController.text.trim();
+      final fullName = _fullNameController.text.trim();
       final email = _emailController.text.trim();
       final password = _passwordController.text.trim();
 
-      if (firstName.isEmpty || lastName.isEmpty || email.isEmpty || password.isEmpty) {
+      if (fullName.isEmpty || email.isEmpty || password.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please fill in all fields')),
         );
@@ -44,8 +73,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: email,
         password: password,
         data: {
-          'first_name': firstName,
-          'last_name': lastName,
+          'full_name': fullName,
         },
       );
 
@@ -54,17 +82,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       print('Current session after signup: ${supabase.auth.currentSession}');
 
       if (response.user != null) {
-
         // Insert user into the users table
         await supabase.from('users').insert({
           'id': response.user!.id,
           'email': email,
-          'first_name': firstName,
-          'last_name': lastName,
+          'full_name': fullName,
         });
 
         print('Inserted user into users table: ${response.user!.id}');
-        
+
         if (mounted) {
           // Show a confirmation message
           showDialog(
@@ -104,9 +130,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       print('Registration error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration failed: $e')),
-        );
+        if (e.toString().contains('SocketException')) {
+          _showNetworkErrorModal();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Registration failed: $e')),
+          );
+        }
       }
     }
   }
@@ -150,25 +180,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                     child: const Text(
                       'Sign In',
-                      style: TextStyle(fontSize: 18, color: Color(0xFFB3B3B3)),
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Color(0xFFB3B3B3),
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 40),
               TextField(
-                controller: _firstNameController,
+                controller: _fullNameController,
                 decoration: const InputDecoration(
-                  hintText: 'First Name',
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                style: const TextStyle(color: Color(0xFFFFFFFF)),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _lastNameController,
-                decoration: const InputDecoration(
-                  hintText: 'Last Name',
+                  hintText: 'Full Name',
                   prefixIcon: Icon(Icons.person_outline),
                 ),
                 style: const TextStyle(color: Color(0xFFFFFFFF)),

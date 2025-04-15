@@ -21,46 +21,81 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _login() async {
-  try {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
-      return;
-    }
-
-    final supabase = Supabase.instance.client;
-    final response = await supabase.auth.signInWithPassword(
-      email: email,
-      password: password,
+  void _showNetworkErrorModal() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        title: const Text(
+          'No Internet Connection',
+          style: TextStyle(
+            color: Color(0xFFFFFFFF),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Please check your internet connection and try again.',
+          style: TextStyle(color: Color(0xFFB3B3B3)),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
+  }
 
-    print('Login response: $response');
-    print('User after login: ${response.user}');
-    print('Current session after login: ${supabase.auth.currentSession}');
+  Future<void> _login() async {
+    try {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
 
-    if (response.user != null) {
-      // Navigate back to Splash Screen to handle routing
-      if (mounted) {
-        context.go('/'); // Go to Splash Screen, which will redirect appropriately
+      if (email.isEmpty || password.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill in all fields')),
+        );
+        return;
       }
-    } else {
-      throw 'Login failed: No user returned';
-    }
-  } catch (e) {
-    print('Login error: $e');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: $e')),
+
+      final supabase = Supabase.instance.client;
+      final response = await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
       );
+
+      print('Login response: $response');
+      print('User after login: ${response.user}');
+      print('Current session after login: ${supabase.auth.currentSession}');
+
+      if (response.user != null) {
+        // Navigate back to Splash Screen to handle routing
+        if (mounted) {
+          context.go('/'); // Go to Splash Screen, which will redirect appropriately
+        }
+      } else {
+        throw 'Login failed: No user returned';
+      }
+    } catch (e) {
+      print('Login error: $e');
+      if (mounted) {
+        if (e.toString().contains('SocketException')) {
+          _showNetworkErrorModal();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Login failed: $e')),
+          );
+        }
+      }
     }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
