@@ -12,6 +12,7 @@ class FriendsScreen extends StatefulWidget {
 class _FriendsScreenState extends State<FriendsScreen> {
   List<Map<String, dynamic>> _friends = [];
   List<Map<String, dynamic>> _incomingRequests = [];
+  List<Map<String, dynamic>> _sentRequests = [];
   List<Map<String, dynamic>> _searchResults = [];
   bool _isLoading = true;
   bool _isSearching = false;
@@ -47,20 +48,21 @@ class _FriendsScreenState extends State<FriendsScreen> {
           .eq('user_id', user.id);
 
       final friendIds = friendsResponse.map((f) => f['friend_id'] as String).toList();
-      final friendsData = await supabase
-          .from('users')
-          .select('id, username, profile_image_url')
-          .inFilter('id', friendIds);
+      final friendsData = friendIds.isNotEmpty
+          ? await supabase
+              .from('users')
+              .select('id, username, profile_image_url')
+              .inFilter('id', friendIds)
+          : [];
 
       // Fetch incoming friend requests
-      final requestsResponse = await supabase
+      final incomingRequestsResponse = await supabase
           .from('friend_requests')
           .select('id, sender_id')
           .eq('receiver_id', user.id)
           .eq('status', 'pending');
 
-      // Fetch sender details separately
-      final senderIds = requestsResponse.map((r) => r['sender_id'] as String).toList();
+      final senderIds = incomingRequestsResponse.map((r) => r['sender_id'] as String).toList();
       final sendersData = senderIds.isNotEmpty
           ? await supabase
               .from('users')
@@ -68,8 +70,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
               .inFilter('id', senderIds)
           : [];
 
-      // Map sender details to requests
-      final requestsWithSenders = requestsResponse.map((request) {
+      final requestsWithSenders = incomingRequestsResponse.map((request) {
         final sender = sendersData.firstWhere(
           (s) => s['id'] == request['sender_id'],
           orElse: () => {'username': 'Unknown', 'profile_image_url': null},
@@ -82,9 +83,38 @@ class _FriendsScreenState extends State<FriendsScreen> {
         };
       }).toList();
 
+      // Fetch sent friend requests
+      final sentRequestsResponse = await supabase
+          .from('friend_requests')
+          .select('id, receiver_id')
+          .eq('sender_id', user.id)
+          .eq('status', 'pending');
+
+      final receiverIds = sentRequestsResponse.map((r) => r['receiver_id'] as String).toList();
+      final receiversData = receiverIds.isNotEmpty
+          ? await supabase
+              .from('users')
+              .select('id, username, profile_image_url')
+              .inFilter('id', receiverIds)
+          : [];
+
+      final sentRequestsWithReceivers = sentRequestsResponse.map((request) {
+        final receiver = receiversData.firstWhere(
+          (r) => r['id'] == request['receiver_id'],
+          orElse: () => {'username': 'Unknown', 'profile_image_url': null},
+        );
+        return {
+          'id': request['id'],
+          'receiver_id': request['receiver_id'],
+          'username': receiver['username'],
+          'profile_image_url': receiver['profile_image_url'],
+        };
+      }).toList();
+
       setState(() {
-        _friends = friendsData;
+        _friends = List<Map<String, dynamic>>.from(friendsData);
         _incomingRequests = requestsWithSenders;
+        _sentRequests = sentRequestsWithReceivers;
         _isLoading = false;
       });
     } catch (e) {
@@ -129,14 +159,21 @@ class _FriendsScreenState extends State<FriendsScreen> {
           .cast<String>()
           .toList();
 
-      // Search users
-      final searchResults = await supabase
+      // Build the query
+      var queryBuilder = supabase
           .from('users')
           .select('id, username, profile_image_url')
           .ilike('username', '%$query%')
-          .not('id', 'eq', user.id)
-          .not('id', 'in', '(${friendIds.join(',')})')
-          .not('id', 'in', '(${pendingIds.join(',')})');
+          .not('id', 'eq', user.id);
+
+      if (friendIds.isNotEmpty) {
+        queryBuilder = queryBuilder.not('id', 'in', '(${friendIds.join(',')})');
+      }
+      if (pendingIds.isNotEmpty) {
+        queryBuilder = queryBuilder.not('id', 'in', '(${pendingIds.join(',')})');
+      }
+
+      final searchResults = await queryBuilder;
 
       setState(() {
         _searchResults = searchResults;
@@ -208,14 +245,16 @@ class _FriendsScreenState extends State<FriendsScreen> {
           .eq('user_id', user.id);
 
       final friendIds = friendsResponse.map((f) => f['friend_id'] as String).toList();
-      final friendsData = await supabase
-          .from('users')
-          .select('id, username, profile_image_url')
-          .inFilter('id', friendIds);
+      final friendsData = friendIds.isNotEmpty
+          ? await supabase
+              .from('users')
+              .select('id, username, profile_image_url')
+              .inFilter('id', friendIds)
+          : [];
 
       setState(() {
         _incomingRequests = _incomingRequests.where((r) => r['id'] != requestId).toList();
-        _friends = friendsData;
+        _friends = List<Map<String, dynamic>>.from(friendsData);
       });
 
       if (mounted) {
@@ -393,6 +432,59 @@ class _FriendsScreenState extends State<FriendsScreen> {
                               );
                             },
                           ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+
+                  // Sent friend requests
+                  if (_sentRequests.isNotEmpty)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Sent Requests',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFFFFFFF),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _sentRequests.length,
+                          itemBuilder: (context, index) {
+                            final request = _sentRequests[index];
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 16.0),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E1E1E),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: const Color(0xFF4CAF50),
+                                  backgroundImage: request['profile_image_url'] != null
+                                      ? NetworkImage(request['profile_image_url'])
+                                      : null,
+                                  child: request['profile_image_url'] == null
+                                      ? const Icon(Icons.person, color: Colors.white)
+                                      : null,
+                                ),
+                                title: Text(
+                                  request['username'],
+                                  style: const TextStyle(color: Color(0xFFFFFFFF)),
+                                ),
+                                subtitle: const Text(
+                                  'Pending',
+                                  style: TextStyle(color: Color(0xFFB3B3B3)),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                         const SizedBox(height: 24),
                       ],
                     ),

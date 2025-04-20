@@ -10,14 +10,18 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _fullNameController = TextEditingController();
+  // final _fullNameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
 
   @override
   void dispose() {
-    _fullNameController.dispose();
+    // _fullNameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();  
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -57,11 +61,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _register() async {
     try {
-      final fullName = _fullNameController.text.trim();
+      // final fullName = _fullNameController.text.trim();
+      final firstName = _firstNameController.text.trim();
+      final lastName = _lastNameController.text.trim();
       final email = _emailController.text.trim();
       final password = _passwordController.text.trim();
 
-      if (fullName.isEmpty || email.isEmpty || password.isEmpty) {
+      if (firstName.isEmpty || lastName.isEmpty || email.isEmpty || password.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please fill in all fields')),
         );
@@ -73,7 +79,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: email,
         password: password,
         data: {
-          'full_name': fullName,
+          // 'full_name': fullName,
+          'first_name': firstName,
+          'last_name': lastName,
         },
       );
 
@@ -86,7 +94,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         await supabase.from('users').insert({
           'id': response.user!.id,
           'email': email,
-          'full_name': fullName,
+          // 'full_name': fullName,
+          'first_name': firstName,
+          'last_name': lastName,
         });
 
         print('Inserted user into users table: ${response.user!.id}');
@@ -188,11 +198,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 40),
+              // const SizedBox(height: 40),
+              // TextField(
+              //   controller: _fullNameController,
+              //   decoration: const InputDecoration(
+              //     hintText: 'Full Name',
+              //     prefixIcon: Icon(Icons.person_outline),
+              //   ),
+              //   style: const TextStyle(color: Color(0xFFFFFFFF)),
+              // ),
+              const SizedBox(height: 16),
               TextField(
-                controller: _fullNameController,
+                controller: _firstNameController,
                 decoration: const InputDecoration(
-                  hintText: 'Full Name',
+                  hintText: 'First Name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                style: const TextStyle(color: Color(0xFFFFFFFF)),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _lastNameController,
+                decoration: const InputDecoration(
+                  hintText: 'Last Name',
                   prefixIcon: Icon(Icons.person_outline),
                 ),
                 style: const TextStyle(color: Color(0xFFFFFFFF)),
