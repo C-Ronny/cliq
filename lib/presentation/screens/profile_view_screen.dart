@@ -40,6 +40,9 @@ class _ProfileViewScreenState extends State<ProfileViewScreen> {
 
   Future<void> _fetchUserData() async {
     try {
+      setState(() {
+        _isLoading = true;
+      });
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
       if (user == null) {
@@ -55,12 +58,23 @@ class _ProfileViewScreenState extends State<ProfileViewScreen> {
           .eq('id', user.id)
           .single();
 
+      // Append a timestamp to the profile_image_url to avoid CDN caching
+      String? updatedProfileImageUrl = response['profile_image_url'];
+      if (updatedProfileImageUrl != null) {
+        // Clear the cache for the old URL (without timestamp)
+        if (_profileImageUrl != null) {
+          imageCache.evict(NetworkImage(_profileImageUrl!));
+        }
+        updatedProfileImageUrl =
+            '$updatedProfileImageUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+      }
+
       setState(() {
         _usernameController.text = response['username'] ?? '';
         _firstNameController.text = response['first_name'] ?? '';
         _lastNameController.text = response['last_name'] ?? '';
         _emailController.text = response['email'] ?? user.email ?? '';
-        _profileImageUrl = response['profile_image_url'];
+        _profileImageUrl = updatedProfileImageUrl;
         _isLoading = false;
       });
     } catch (e) {
@@ -69,6 +83,9 @@ class _ProfileViewScreenState extends State<ProfileViewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading profile: $e')),
         );
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -92,15 +109,18 @@ class _ProfileViewScreenState extends State<ProfileViewScreen> {
       final user = supabase.auth.currentUser;
       if (user == null) return null;
 
-      final fileName = '${user.id}/profile.jpg'; // Consistent with profile_screen.dart
+      final fileName = '${user.id}/profile.jpg';
       final filePath = fileName;
 
+      // Upload the new file with upsert to overwrite if it exists
       await supabase.storage
-          .from('avatars') // Updated to match the correct bucket name
+          .from('avatars')
           .upload(filePath, _selectedImage!, fileOptions: const FileOptions(upsert: true));
 
+      // Append a timestamp to the URL to avoid caching
       final publicUrl = supabase.storage.from('avatars').getPublicUrl(filePath);
-      return publicUrl;
+      final timestampedUrl = '$publicUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+      return timestampedUrl;
     } catch (e) {
       print('Error uploading image: $e');
       if (mounted) {
@@ -127,12 +147,16 @@ class _ProfileViewScreenState extends State<ProfileViewScreen> {
       final newProfileImageUrl = await _uploadImage() ?? _profileImageUrl;
 
       // Update user profile in the database
+      // Store the URL without the timestamp in the database
+      final urlToStore = newProfileImageUrl != null
+          ? newProfileImageUrl.split('?').first
+          : null;
       await supabase.from('users').update({
         'username': _usernameController.text,
         'first_name': _firstNameController.text,
         'last_name': _lastNameController.text,
         'email': _emailController.text,
-        'profile_image_url': newProfileImageUrl,
+        'profile_image_url': urlToStore,
       }).eq('id', user.id);
 
       // Update email in Supabase Auth if it has changed
@@ -147,6 +171,11 @@ class _ProfileViewScreenState extends State<ProfileViewScreen> {
         await supabase.auth.updateUser(
           UserAttributes(password: _passwordController.text),
         );
+      }
+
+      // Clear the image cache for the old URL to ensure the new image loads
+      if (_profileImageUrl != null) {
+        imageCache.evict(NetworkImage(_profileImageUrl!));
       }
 
       setState(() {
@@ -194,118 +223,57 @@ class _ProfileViewScreenState extends State<ProfileViewScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFF4CAF50),
-              ),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundColor: const Color(0xFF4CAF50),
-                          backgroundImage: _selectedImage != null
-                              ? FileImage(_selectedImage!)
-                              : _profileImageUrl != null
-                                  ? NetworkImage(_profileImageUrl!)
-                                  : null,
-                          child: _selectedImage == null && _profileImageUrl == null
-                              ? const Icon(Icons.person, color: Colors.white, size: 50)
-                              : null,
-                        ),
-                        if (_isEditing)
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: IconButton(
-                              icon: const Icon(Icons.camera_alt, color: Colors.white),
-                              onPressed: _pickImage,
-                              style: IconButton.styleFrom(
-                                backgroundColor: const Color(0xFF4CAF50),
+      body: RefreshIndicator(
+        onRefresh: _fetchUserData,
+        color: const Color(0xFF4CAF50),
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF4CAF50),
+                ),
+              )
+            : SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 50,
+                            backgroundColor: const Color(0xFF4CAF50),
+                            backgroundImage: _selectedImage != null
+                                ? FileImage(_selectedImage!)
+                                : _profileImageUrl != null
+                                    ? NetworkImage(_profileImageUrl!)
+                                    : null,
+                            child: _selectedImage == null && _profileImageUrl == null
+                                ? const Icon(Icons.person, color: Colors.white, size: 50)
+                                : null,
+                          ),
+                          if (_isEditing)
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: IconButton(
+                                icon: const Icon(Icons.camera_alt, color: Colors.white),
+                                onPressed: _pickImage,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: const Color(0xFF4CAF50),
+                                ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  TextField(
-                    controller: _usernameController,
-                    enabled: _isEditing,
-                    decoration: InputDecoration(
-                      labelText: 'Username',
-                      labelStyle: const TextStyle(color: Color(0xFFB3B3B3)),
-                      filled: true,
-                      fillColor: const Color(0xFF1E1E1E),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                        ],
                       ),
                     ),
-                    style: const TextStyle(color: Color(0xFFFFFFFF)),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _firstNameController,
-                    enabled: _isEditing,
-                    decoration: InputDecoration(
-                      labelText: 'First Name',
-                      labelStyle: const TextStyle(color: Color(0xFFB3B3B3)),
-                      filled: true,
-                      fillColor: const Color(0xFF1E1E1E),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    style: const TextStyle(color: Color(0xFFFFFFFF)),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _lastNameController,
-                    enabled: _isEditing,
-                    decoration: InputDecoration(
-                      labelText: 'Last Name',
-                      labelStyle: const TextStyle(color: Color(0xFFB3B3B3)),
-                      filled: true,
-                      fillColor: const Color(0xFF1E1E1E),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    style: const TextStyle(color: Color(0xFFFFFFFF)),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _emailController,
-                    enabled: _isEditing,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      labelStyle: const TextStyle(color: Color(0xFFB3B3B3)),
-                      filled: true,
-                      fillColor: const Color(0xFF1E1E1E),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    style: const TextStyle(color: Color(0xFFFFFFFF)),
-                  ),
-                  const SizedBox(height: 16),
-                  if (_isEditing)
+                    const SizedBox(height: 24),
                     TextField(
-                      controller: _passwordController,
-                      obscureText: true,
+                      controller: _usernameController,
+                      enabled: _isEditing,
                       decoration: InputDecoration(
-                        labelText: 'New Password (optional)',
+                        labelText: 'Username',
                         labelStyle: const TextStyle(color: Color(0xFFB3B3B3)),
                         filled: true,
                         fillColor: const Color(0xFF1E1E1E),
@@ -316,50 +284,116 @@ class _ProfileViewScreenState extends State<ProfileViewScreen> {
                       ),
                       style: const TextStyle(color: Color(0xFFFFFFFF)),
                     ),
-                  const SizedBox(height: 24),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (_isEditing) {
-                          _updateProfile();
-                        } else {
-                          setState(() {
-                            _isEditing = true;
-                          });
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4CAF50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _firstNameController,
+                      enabled: _isEditing,
+                      decoration: InputDecoration(
+                        labelText: 'First Name',
+                        labelStyle: const TextStyle(color: Color(0xFFB3B3B3)),
+                        filled: true,
+                        fillColor: const Color(0xFF1E1E1E),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                       ),
-                      child: Text(
-                        _isEditing ? 'Save Changes' : 'Edit Profile',
-                        style: const TextStyle(fontSize: 16),
-                      ),
+                      style: const TextStyle(color: Color(0xFFFFFFFF)),
                     ),
-                  ),
-                  if (_isEditing)
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _lastNameController,
+                      enabled: _isEditing,
+                      decoration: InputDecoration(
+                        labelText: 'Last Name',
+                        labelStyle: const TextStyle(color: Color(0xFFB3B3B3)),
+                        filled: true,
+                        fillColor: const Color(0xFF1E1E1E),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      style: const TextStyle(color: Color(0xFFFFFFFF)),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _emailController,
+                      enabled: _isEditing,
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        labelStyle: const TextStyle(color: Color(0xFFB3B3B3)),
+                        filled: true,
+                        fillColor: const Color(0xFF1E1E1E),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      style: const TextStyle(color: Color(0xFFFFFFFF)),
+                    ),
+                    const SizedBox(height: 16),
+                    if (_isEditing)
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: 'New Password (optional)',
+                          labelStyle: const TextStyle(color: Color(0xFFB3B3B3)),
+                          filled: true,
+                          fillColor: const Color(0xFF1E1E1E),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        style: const TextStyle(color: Color(0xFFFFFFFF)),
+                      ),
+                    const SizedBox(height: 24),
                     Center(
-                      child: TextButton(
+                      child: ElevatedButton(
                         onPressed: () {
-                          setState(() {
-                            _isEditing = false;
-                            _selectedImage = null;
-                            _fetchUserData(); // Revert changes
-                          });
+                          if (_isEditing) {
+                            _updateProfile();
+                          } else {
+                            setState(() {
+                              _isEditing = true;
+                            });
+                          }
                         },
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(color: Colors.red),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4CAF50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                        ),
+                        child: Text(
+                          _isEditing ? 'Save Changes' : 'Edit Profile',
+                          style: const TextStyle(fontSize: 16),
                         ),
                       ),
                     ),
-                ],
+                    if (_isEditing)
+                      Center(
+                        child: TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _isEditing = false;
+                              _selectedImage = null;
+                              _fetchUserData(); // Revert changes
+                            });
+                          },
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color(0xFF121212),
         selectedItemColor: const Color(0xFF4CAF50),
