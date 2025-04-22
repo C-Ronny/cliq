@@ -41,6 +41,12 @@ dependencies:
   image_picker: ^1.1.2 # Selecting images and videos from the gallery or taking them with camera
   permission_handler: ^11.3.1 # Handles permissions for camera and microphone
 
+  file_picker: ^10.1.2
+  flutter_sound: ^9.28.0
+  cached_network_image: ^3.4.1
+  timeago: ^3.7.0
+  uuid: ^4.5.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
