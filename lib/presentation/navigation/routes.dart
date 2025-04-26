@@ -6,9 +6,11 @@ import 'package:cliq/presentation/screens/profile_screen.dart';
 import 'package:cliq/presentation/screens/home_screen.dart';
 import 'package:cliq/presentation/screens/friends_screen.dart';
 import 'package:cliq/presentation/screens/chats_screen.dart';
+import 'package:cliq/presentation/screens/chat_screen.dart';
 import 'package:cliq/presentation/screens/profile_view_screen.dart';
 import 'package:cliq/presentation/screens/call_screen.dart';
 import 'package:cliq/presentation/screens/add_friends_screen.dart';
+
 
 final GoRouter router = GoRouter(
   initialLocation: '/',
@@ -57,6 +59,17 @@ final GoRouter router = GoRouter(
       builder: (context, state) {
         final callId = state.pathParameters['callId']!;
         return AddFriendsScreen(callId: callId);
+      },
+    ),
+    GoRoute(
+      path: '/chats',
+      builder: (context, state) => const ChatsScreen(),
+    ),
+    GoRoute(
+      path: '/chat/:id',
+      builder: (context, state) {
+        final conversationId = state.pathParameters['id']!;
+        return ChatScreen(conversationId: conversationId);
       },
     ),
   ],
