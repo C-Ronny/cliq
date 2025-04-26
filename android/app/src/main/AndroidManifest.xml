@@ -2,6 +2,8 @@
     <uses-permission android:name="android.permission.CAMERA"/> <!-- Camera permissions -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/> <!-- Storage permissions -->
     <uses-permission android:name="android.permission.INTERNET"/> <!-- Internet permissions -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" /> <!-- Microphone permissions -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /> <!-- Storage permissions -->
     <application
         android:label="cliq"
         android:name="${applicationName}"
